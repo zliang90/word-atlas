@@ -92,7 +92,9 @@ function Intro({ step }: { step: Step }) {
   const atlas = useAtlas();
   const { entry } = useEntry(step.id);
   const settings = useStore((s) => s.settings);
+  const nextButton = useRef<HTMLButtonElement>(null);
   const elapsed = useStepTimer();
+  useEffect(() => nextButton.current?.focus({ preventScroll: true }), []);
   useEffect(() => {
     if (entry && settings.autoplay) void play(atlas.audio(entry, settings.accent), entry.w, settings.accent);
   }, [entry, atlas, settings.autoplay, settings.accent]);
@@ -110,7 +112,7 @@ function Intro({ step }: { step: Step }) {
       </p>
       <EntryView entry={entry} mode="intro" />
       <footer className="learn-actions">
-        <button className="btn btn-primary btn-xl" onClick={next} autoFocus>
+        <button ref={nextButton} className="btn btn-primary btn-xl" onClick={next}>
           认识了 <ArrowRight size={20} />
         </button>
         <span className="hint-keys">
@@ -282,7 +284,7 @@ function SpellInput({ entry, pending, hints, onHint, onSubmit }: { entry: Entry;
   const prefix = target.slice(0, hints);
   useEffect(() => {
     if (hints && !normalize(value).startsWith(normalize(prefix))) setValue(prefix);
-    input.current?.focus();
+    input.current?.focus({ preventScroll: true });
   }, [hints]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown = pending ? pending.value : value;
   return (
@@ -309,7 +311,6 @@ function SpellInput({ entry, pending, hints, onHint, onSubmit }: { entry: Entry;
         className="spell-input"
         value={shown}
         onChange={(e) => !pending && setValue(e.target.value.slice(0, target.length + 6))}
-        autoFocus
         autoCapitalize="off"
         autoCorrect="off"
         autoComplete="off"

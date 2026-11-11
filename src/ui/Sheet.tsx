@@ -8,6 +8,7 @@ export function Sheet({
   label,
   children,
   wide = false,
+  modal = true,
   className = "",
 }: {
   open: boolean;
@@ -15,6 +16,7 @@ export function Sheet({
   label: string;
   children: React.ReactNode;
   wide?: boolean;
+  modal?: boolean;
   className?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -26,7 +28,7 @@ export function Sheet({
         e.preventDefault();
         onClose();
       }
-      if (e.key === "Tab" && panel.current) {
+      if (modal && e.key === "Tab" && panel.current) {
         const f = panel.current.querySelectorAll<HTMLElement>('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
         if (!f.length) return;
         const first = f[0];
@@ -41,18 +43,18 @@ export function Sheet({
       }
     };
     document.addEventListener("keydown", onKey);
-    document.documentElement.classList.add("is-locked");
+    if (modal) document.documentElement.classList.add("is-locked");
     requestAnimationFrame(() => panel.current?.focus({ preventScroll: true }));
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.documentElement.classList.remove("is-locked");
+      if (modal) document.documentElement.classList.remove("is-locked");
       prev?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open, onClose, modal]);
   if (!open) return null;
   return (
     <div className="sheet-root" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={panel} className={`sheet ${wide ? "sheet-wide" : ""} ${className}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
+      <div ref={panel} className={`sheet ${wide ? "sheet-wide" : ""} ${className}`} role="dialog" aria-modal={modal || undefined} aria-label={label} tabIndex={-1}>
         <span className="sheet-grip" aria-hidden="true" />
         <button className="icon-btn sheet-close" onClick={onClose} aria-label="关闭">
           <X size={20} />

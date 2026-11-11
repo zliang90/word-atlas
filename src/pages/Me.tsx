@@ -1,5 +1,8 @@
 import { Download, RotateCcw, Upload } from "lucide-react";
 import { useMemo, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import { useAtlas } from "../atlas/context";
 import { isMastered } from "../store/srs";
 import { dayKey, exportBackup, importBackup, resetProgress, store, useStore, type Settings } from "../store/store";
@@ -33,13 +36,29 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
   }, [progress]);
 
   const set = (patch: Partial<Settings>) => store.settings(patch);
-  const download = () => {
-    const blob = new Blob([exportBackup()], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `word-atlas-backup-${dayKey()}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  const download = async () => {
+    const filename = `word-atlas-backup-${dayKey()}.json`;
+    try {
+      const backup = exportBackup();
+      if (Capacitor.isNativePlatform()) {
+        const { uri } = await Filesystem.writeFile({ path: filename, data: backup, directory: Directory.Cache });
+        await Share.share({ title: "词光学习备份", url: uri, dialogTitle: "导出备份" });
+        return;
+      }
+      const blob = new Blob([backup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.hidden = true;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast("备份文件已下载。", "ok");
+    } catch {
+      toast("备份导出失败，请重试。", "warn");
+    }
   };
   const restore = async (f: File) => {
     if (f.size > 30 * 1024 * 1024) return toast("文件太大，不像是学习备份。", "warn");

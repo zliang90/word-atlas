@@ -175,7 +175,7 @@ function Shell({ privateAvailable }: { privateAvailable: boolean }) {
       )}
 
       {!focus && (
-        <nav className="tabbar" aria-label="主导航">
+        <nav className={`tabbar ${word ? "has-word" : ""}`} aria-label="主导航">
           {NAV.map(({ page, label, icon: Icon }) => (
             <a key={page} href={page === "today" ? "#/" : `#/${page}`} className={route.page === page ? "is-on" : ""} aria-current={route.page === page ? "page" : undefined}>
               <Icon size={22} strokeWidth={route.page === page ? 2.1 : 1.7} />
@@ -222,7 +222,7 @@ function WordSheet({ id }: { id: string | null }) {
     return () => window.removeEventListener("keydown", on);
   }, [id, neighbor]);
   return (
-    <Sheet open={!!id} onClose={closeWord} label={ref ? `${ref.word} 词条` : "词条"} wide>
+    <Sheet open={!!id} onClose={closeWord} label={ref ? `${ref.word} 词条` : "词条"} wide modal={false}>
       {entry ? (
         <EntryView key={entry.id} entry={entry} />
       ) : error ? (
