@@ -1,13 +1,14 @@
 import { Download, RotateCcw, Upload } from "lucide-react";
 import { useMemo, useRef } from "react";
-import { Capacitor } from "@capacitor/core";
-import { Directory, Filesystem } from "@capacitor/filesystem";
-import { Share } from "@capacitor/share";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { useAtlas } from "../atlas/context";
 import { isMastered } from "../store/srs";
 import { dayKey, exportBackup, importBackup, resetProgress, store, useStore, type Settings } from "../store/store";
 import { toast } from "../ui/Toast";
 import { streakOf } from "./Today";
+
+const BackupExport = registerPlugin<{ save: (options: { filename: string; data: string }) => Promise<{ saved?: boolean; cancelled?: boolean }> }>("BackupExport");
 
 export function Me({ privateAvailable }: { privateAvailable: boolean }) {
   const atlas = useAtlas();
@@ -40,9 +41,19 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
     const filename = `word-atlas-backup-${dayKey()}.json`;
     try {
       const backup = exportBackup();
+      if (Capacitor.getPlatform() === "android") {
+        const result = await BackupExport.save({ filename, data: backup });
+        if (result.cancelled) {
+          toast("已取消导出。");
+          return;
+        }
+        if (!result.saved) throw new Error("Backup file was not saved.");
+        toast(`备份文件已保存：${filename}`, "ok");
+        return;
+      }
       if (Capacitor.isNativePlatform()) {
-        const { uri } = await Filesystem.writeFile({ path: filename, data: backup, directory: Directory.Cache });
-        await Share.share({ title: "词光学习备份", url: uri, dialogTitle: "导出备份" });
+        await Filesystem.writeFile({ path: filename, data: backup, directory: Directory.Documents, encoding: Encoding.UTF8 });
+        toast("备份已保存到手机的 Documents 目录。", "ok");
         return;
       }
       const blob = new Blob([backup], { type: "application/json" });
@@ -56,7 +67,12 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
       toast("备份文件已下载。", "ok");
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === "Share canceled") {
+        toast("已取消导出。");
+        return;
+      }
+      console.error("Backup export failed", error);
       toast("备份导出失败，请重试。", "warn");
     }
   };
