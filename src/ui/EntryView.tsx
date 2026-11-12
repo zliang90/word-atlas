@@ -162,7 +162,7 @@ export function EntryView({ entry, mode = "detail", eager = true }: { entry: Ent
                         {f.label}
                       </button>
                     ) : (
-                      <span key={f.label}>{f.label}</span>
+                      <span key={f.label} lang="en">{f.label}</span>
                     ),
                   )}
                 </p>
@@ -171,13 +171,13 @@ export function EntryView({ entry, mode = "detail", eager = true }: { entry: Ent
             {entry.syn.length > 0 && (
               <div>
                 <h3 className="eyebrow">近义</h3>
-                <p>{entry.syn.map((s) => <span key={s}>{s}</span>)}</p>
+                <p>{entry.syn.map((s) => <span key={s} lang="en">{s}</span>)}</p>
               </div>
             )}
             {entry.ant.length > 0 && (
               <div>
                 <h3 className="eyebrow">反义</h3>
-                <p>{entry.ant.map((s) => <span key={s}>{s}</span>)}</p>
+                <p>{entry.ant.map((s) => <span key={s} lang="en">{s}</span>)}</p>
               </div>
             )}
           </section>

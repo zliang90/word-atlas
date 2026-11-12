@@ -1,4 +1,6 @@
 import { BookOpen, ChevronLeft, ChevronRight, Compass, Github, Keyboard, Moon, Search, Sun, User } from "lucide-react";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import { useCallback, useEffect, useState } from "react";
 import { AtlasContext, useAtlas, useEntry } from "./atlas/context";
 import { loadOpenAtlas, loadPrivateAtlas } from "./atlas/data";
@@ -12,6 +14,7 @@ import { Me } from "./pages/Me";
 import { Onboarding } from "./pages/Onboarding";
 import { Practice } from "./pages/Practice";
 import { Today } from "./pages/Today";
+import { headwordPattern } from "./lib/text";
 import { cue } from "./lib/sound";
 import { store, useStore } from "./store/store";
 import { EntryView } from "./ui/EntryView";
@@ -92,6 +95,7 @@ export default function App() {
 }
 
 function Shell({ privateAvailable }: { privateAvailable: boolean }) {
+  const atlas = useAtlas();
   const { route, word } = useLocation();
   const onboarded = useStore((s) => s.settings.onboarded);
   const theme = useStore((s) => s.settings.theme);
@@ -114,6 +118,71 @@ function Shell({ privateAvailable }: { privateAvailable: boolean }) {
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
   }, [focus]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+      const current = currentLocation();
+      if (current.word) closeWord();
+      else if (current.route.page !== "today") go({ page: "today" }, null, true);
+      else if (canGoBack) history.back();
+      else void CapacitorApp.exitApp();
+    });
+    return () => void listener.then((handle) => handle.remove());
+  }, []);
+
+  useEffect(() => {
+    const words = new Map(atlas.words.map((ref) => [ref.word.normalize("NFKC").toLowerCase(), ref.id]));
+    const forms = atlas.words.filter((ref) => ref.word.length >= 4).map((ref) => ({ id: ref.id, pattern: headwordPattern(ref.word) }));
+    const wordRangeAt = (x: number, y: number) => {
+      const caret = document.caretRangeFromPoint?.(x, y);
+      const node = caret?.startContainer;
+      if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+      const text = node.textContent ?? "";
+      const tokenPattern = /[\p{L}\p{M}]+(?:['’‘-][\p{L}\p{M}]+)*/gu;
+      for (const match of text.matchAll(tokenPattern)) {
+        const start = match.index ?? 0;
+        if (caret.startOffset < start || caret.startOffset > start + match[0].length) continue;
+        const range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, start + match[0].length);
+        return range;
+      }
+      return null;
+    };
+    const hover =
+      typeof Highlight !== "undefined" && typeof CSS !== "undefined" && "highlights" in CSS
+        ? new Highlight()
+        : null;
+    if (hover) CSS.highlights.set("word-atlas-hover", hover);
+    const onPointerMove = (event: PointerEvent) => {
+      if (!hover) return;
+      const target = event.target;
+      hover.clear();
+      if (!(target instanceof Element) || !target.closest('[lang="en"]') || target.closest("button, a, input, textarea, [contenteditable='true']")) return;
+      const range = wordRangeAt(event.clientX, event.clientY);
+      if (range) hover.add(range);
+    };
+    const onClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest("button, a, input, textarea, [contenteditable='true']")) return;
+      const range = wordRangeAt(event.clientX, event.clientY);
+      if (!range) return;
+      const token = range.toString().normalize("NFKC").toLowerCase();
+      const id = words.get(token) ?? forms.find((form) => form.pattern.test(token))?.id;
+      if (id) {
+        event.stopPropagation();
+        openWord(id);
+      }
+    };
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("click", onClick, true);
+      if (hover) CSS.highlights.delete("word-atlas-hover");
+    };
+  }, [atlas]);
 
   useEffect(() => {
     if (!word) window.scrollTo({ top: 0 });
@@ -174,7 +243,7 @@ function Shell({ privateAvailable }: { privateAvailable: boolean }) {
         </footer>
       )}
 
-      {!focus && (
+      {!focus && !word && (
         <nav className={`tabbar ${word ? "has-word" : ""}`} aria-label="主导航">
           {NAV.map(({ page, label, icon: Icon }) => (
             <a key={page} href={page === "today" ? "#/" : `#/${page}`} className={route.page === page ? "is-on" : ""} aria-current={route.page === page ? "page" : undefined}>
@@ -222,7 +291,7 @@ function WordSheet({ id }: { id: string | null }) {
     return () => window.removeEventListener("keydown", on);
   }, [id, neighbor]);
   return (
-    <Sheet open={!!id} onClose={closeWord} label={ref ? `${ref.word} 词条` : "词条"} wide modal={false}>
+    <Sheet open={!!id} onClose={closeWord} label={ref ? `${ref.word} 词条` : "词条"} scrollKey={`${id ?? ""}:${entry?.id ?? ""}`} wide modal={false}>
       {entry ? (
         <EntryView key={entry.id} entry={entry} />
       ) : error ? (

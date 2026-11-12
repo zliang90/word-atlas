@@ -116,6 +116,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
   const settings = useStore((s) => s.settings);
   const [i, setI] = useState(0);
   const [value, setValue] = useState("");
+  const [failures, setFailures] = useState(0);
   // Running totals live in a ref so every keystroke is counted exactly once.
   const totalsRef = useRef({ typed: 0, correct: 0, accepted: 0, ms: 0 });
   const [totals, setTotals] = useState(totalsRef.current);
@@ -127,6 +128,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
 
   useEffect(() => {
     setValue("");
+    setFailures(0);
     started.current = null;
     input.current?.focus();
     if (mode === "dictation") void play(atlas.audio(e, "ex"), e.ex[0].en, settings.accent);
@@ -138,6 +140,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
     if (done) return;
     if (started.current === null && next) started.current = performance.now();
     const d = typingDelta(value, next, target);
+    if (d.total > d.correct) setFailures((count) => count + d.total - d.correct);
     if (settings.sfx && d.total > 0) void cue("key");
     const t = totalsRef.current;
     totalsRef.current = { ...t, typed: t.typed + d.total, correct: t.correct + d.correct };
@@ -223,7 +226,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
           {chars.map((ch, k) => {
             const t = typed[k];
             const cls = t === undefined ? (k === typed.length ? "is-caret" : "") : same(t, ch) ? "is-ok" : "is-bad";
-            const show = mode === "dictation" && t === undefined ? (ch === " " ? " " : /[A-Za-z]/.test(ch) ? "·" : ch) : ch;
+            const show = mode === "dictation" && t === undefined ? (ch === " " ? " " : /[A-Za-z]/.test(ch) ? "·" : ch) : mode === "word" && failures < 1 ? (t ?? (ch === " " ? " " : "·")) : ch;
             return (
               <span key={k} className={cls}>
                 {show}

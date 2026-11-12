@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Home, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 /** Accessible dialog: centered panel on desktop, bottom sheet on phones. */
 export function Sheet({
@@ -7,6 +7,7 @@ export function Sheet({
   onClose,
   label,
   children,
+  scrollKey,
   wide = false,
   modal = true,
   className = "",
@@ -15,11 +16,23 @@ export function Sheet({
   onClose: () => void;
   label: string;
   children: React.ReactNode;
+  scrollKey?: string | number;
   wide?: boolean;
   modal?: boolean;
   className?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!open || !content.current) return;
+    const element = content.current;
+    element.scrollTop = 0;
+    const frame = requestAnimationFrame(() => {
+      if (content.current === element) element.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, label, scrollKey]);
+
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
@@ -55,12 +68,27 @@ export function Sheet({
   return (
     <div className="sheet-root" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div ref={panel} className={`sheet ${wide ? "sheet-wide" : ""} ${className}`} role="dialog" aria-modal={modal || undefined} aria-label={label} tabIndex={-1}>
-        <span className="sheet-grip" aria-hidden="true" />
-        <button className="icon-btn sheet-close" onClick={onClose} aria-label="关闭">
-          <X size={20} />
-        </button>
-        {children}
+        <SheetToolbar className="sheet-toolbar-mobile" onClose={onClose} />
+        <SheetToolbar className="sheet-toolbar-desktop" onClose={onClose} />
+        <div ref={content} className="sheet-content">
+          {children}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function SheetToolbar({ className, onClose }: { className: string; onClose: () => void }) {
+  return (
+    <div className={`sheet-toolbar ${className}`}>
+      <a className="icon-btn sheet-home" href="#/" aria-label="返回首页" title="返回首页">
+        <Home size={19} />
+        <span>首页</span>
+      </a>
+      <span className="sheet-grip" aria-hidden="true" />
+      <button className="icon-btn sheet-close" onClick={onClose} aria-label="关闭" title="关闭">
+        <X size={20} />
+      </button>
     </div>
   );
 }

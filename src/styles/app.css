@@ -31,6 +31,7 @@
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 2px rgba(30, 38, 64, 0.05), 0 18px 40px -24px rgba(30, 38, 64, 0.28);
   --shadow-lg: 0 30px 80px -30px rgba(20, 26, 46, 0.45), 0 8px 24px -12px rgba(20, 26, 46, 0.2);
   --serif: "Fraunces Variable", "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+  --english: "Source Sans 3 Variable", "Source Sans 3", sans-serif;
   --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --r-sm: 10px;
@@ -136,6 +137,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "kern", "palt";
+}
+
+#root :lang(en) {
+  font-family: var(--english);
 }
 
 body::before {
@@ -1395,16 +1400,46 @@ code {
 
 .sheet {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: 94vh;
+  max-height: 94vh;
+  height: 94dvh;
   max-height: 94dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   background: var(--paper);
   border-radius: 28px 28px 0 0;
-  padding: 26px var(--gutter) calc(28px + env(safe-area-inset-bottom));
+  padding: 0 var(--gutter) calc(28px + env(safe-area-inset-bottom));
   box-shadow: var(--shadow-lg);
   animation: sheet-up 0.42s var(--ease);
   outline: none;
+}
+
+.sheet-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: max(24px, calc(8px + env(safe-area-inset-top))) 14px 8px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-toolbar-mobile {
+  flex: 0 0 auto;
+  margin: 0 calc(-1 * var(--gutter)) 24px;
+}
+
+.sheet-toolbar-desktop {
+  display: none;
+}
+
+.sheet-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes sheet-up {
@@ -1416,7 +1451,7 @@ code {
 
 .sheet-grip {
   position: absolute;
-  top: 8px;
+  top: max(8px, calc(env(safe-area-inset-top) + 2px));
   left: 50%;
   width: 40px;
   height: 4px;
@@ -1426,12 +1461,26 @@ code {
 }
 
 .sheet-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
   background: var(--card);
   box-shadow: var(--shadow-sm);
+}
+
+.sheet-home {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sheet .entry-detail .entry-body {
+  order: -1;
 }
 
 .sheet .entry-art .illo {
@@ -1465,9 +1514,22 @@ code {
   .sheet {
     border-radius: var(--r-xl);
     max-width: 640px;
+    max-height: calc(100vh - 64px);
     max-height: calc(100dvh - 64px);
-    padding: 36px;
+    height: auto;
+    padding: 0 36px 36px;
     animation: sheet-pop 0.38s var(--ease);
+  }
+
+  .sheet-toolbar-mobile {
+    display: none;
+  }
+
+  .sheet-toolbar-desktop {
+    display: flex;
+    flex: 0 0 auto;
+    margin: 0 -36px 24px;
+    padding: 10px 24px;
   }
 
   .sheet-wide {
@@ -1480,6 +1542,10 @@ code {
 
   .sheet .entry-art .illo {
     max-width: none;
+  }
+
+  .sheet .entry-detail .entry-body {
+    order: 0;
   }
 }
 
@@ -3462,6 +3528,16 @@ code {
 
 .typing-help {
   font-size: 13px;
+}
+
+[lang="en"]:not(button) {
+  cursor: pointer;
+}
+
+::highlight(word-atlas-hover) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 0.18em;
 }
 
 .typing-done {

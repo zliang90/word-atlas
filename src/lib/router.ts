@@ -45,6 +45,7 @@ export function href(route: Route, word?: string | null) {
 }
 
 let loc = parse(location.hash);
+let wordTrail: string[] = [];
 const subs = new Set<() => void>();
 window.addEventListener("hashchange", () => {
   const next = parse(location.hash);
@@ -81,6 +82,14 @@ export function go(route: Route, word?: string | null, replace = false) {
   else update();
 }
 
-export const openWord = (id: string) => go(loc.route, id);
-export const closeWord = () => go(loc.route, null);
+export const openWord = (id: string) => {
+  if (loc.word === id) return;
+  if (loc.word) wordTrail.push(loc.word);
+  else wordTrail = [];
+  go(loc.route, id);
+};
+export const closeWord = () => {
+  const previous = wordTrail.pop() ?? null;
+  go(loc.route, previous, true);
+};
 export const currentLocation = () => loc;
